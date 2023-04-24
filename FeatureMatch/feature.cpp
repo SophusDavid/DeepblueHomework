@@ -187,8 +187,9 @@ Mat findEssentialMatrixRANSAC(const vector<Point2f> &pts1, const vector<Point2f>
             p1 << pts1[i].x, pts1[i].y, 1.0;
             Vec3f p2;
             p2 << pts2[i].x, pts2[i].y, 1.0;
+            // 这一步找到了QIANG的问题，不能除norm，否则会结果变差。
+            // Mat p2tEp1 = p2.t() * K.inv().t() * E * K.inv() * p1/norm( E * K.inv() * p1);
             Mat p2tEp1 = p2.t() * K.inv().t() * E * K.inv() * p1;
-
             if (fabs(p2tEp1.at<float>(0, 0)) < RANSAC_THRESHOLD)
             {
                 current_inliers[i] = 1;
@@ -214,6 +215,8 @@ Mat findEssentialMatrixRANSAC(const vector<Point2f> &pts1, const vector<Point2f>
     }
 
     // recompute best E with all inliers
+    cout << "Essential Matrix before recompute:" << endl
+         << best_E << endl;
     vector<Point2f> pts1_inliers, pts2_inliers;
     for (int i = 0; i < N; ++i)
     {
@@ -251,7 +254,8 @@ int main()
     sift->detectAndCompute(img1, Mat(), keypoints1, descriptors1);
     sift->detectAndCompute(img2, Mat(), keypoints2, descriptors2);
     vector<DMatch> matches;
-    FlannBasedMatcher matcher;
+    // FlannBasedMatcher matcher;
+    BFMatcher matcher;
     matcher.match(descriptors1, descriptors2, matches);
     // 找到优质匹配点 这个对结果提升较大
     double min_dist = 10000, max_dist = 0;
@@ -264,15 +268,15 @@ int main()
         if (dist > max_dist)
             max_dist = dist;
     }
-    vector<DMatch> good_matches;
+    // vector<DMatch> good_matches;
     for (int i = 0; i < descriptors1.rows; ++i)
     {
-        if (matches[i].distance <= max(2.5 * min_dist, 30.0))
-        {
+    //     if (matches[i].distance <= max(2.5 * min_dist, 30.0))
+    //     {
             pts1.push_back(keypoints1[matches[i].queryIdx].pt);
             pts2.push_back(keypoints2[matches[i].trainIdx].pt);
-            good_matches.push_back(matches[i]);
-        }
+    //         good_matches.push_back(matches[i]);
+    //     }
     }
     // homework1 end
 
@@ -289,6 +293,10 @@ int main()
     Mat E_cv = findEssentialMat(pts1, pts2, K, RANSAC, 0.99, 1.0);
     cout << "Essential Matrix From OpenCV:" << endl
          << E_cv << endl;
+
+    Mat E_test = findEssentialMat(pts1, pts2, K);
+cout << "Essential Matrix test:" << endl
+         << E_test << endl;
     // 可视化内点匹配
     vector<DMatch> inlier_matches;
 
@@ -297,7 +305,9 @@ int main()
     {
         if (inliers[i])
         {
-            inlier_matches.push_back(good_matches[i]);
+            // inlier_matches.push_back(good_matches[i]);
+            inlier_matches.push_back(matches[i]);
+
         }
     }
 
