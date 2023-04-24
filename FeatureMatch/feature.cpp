@@ -114,41 +114,8 @@ void CenterAndNormalizeImagePoints(const std::vector<Eigen::Vector2f> &points,
         (*normed_points)[i](1) = np_1 * inv_np_2;
     }
 }
-Eigen::Matrix3f EssentialMatrixEightPointEstimate(const std::vector<Eigen::Vector2f> &points1,
-                                                  const std::vector<Eigen::Vector2f> &points2,Mat K)
-                                                  {
-    // Center and normalize image points for better numerical stability.
-    Eigen::Matrix3f EssentialMatrix = Eigen::Matrix3f::Zero();
-Eigen::MatrixXf A(8, 9);
-Eigen::Matrix3f K_inv = cvMat2Eigen(K);
-K_inv = K_inv.inverse().eval();
-for (int i = 0; i < 8; i++) {
-    // Normalize the image coordinates
-    Eigen::Vector3f pt1_normalized = (K_inv * Eigen::Vector3f(points1[i][0],points1[i][1],1.0)).normalized() ;
-    Eigen::Vector3f pt2_normalized = (K_inv * Eigen::Vector3f(points2[i][0],points2[i][1],1.0)).normalized();
-    
-    // Construct the A matrix
-    A.row(i) << pt2_normalized[0] * pt1_normalized[0], pt2_normalized[0] * pt1_normalized[1], pt2_normalized[0],
-                pt2_normalized[1] * pt1_normalized[0], pt2_normalized[1] * pt1_normalized[1], pt2_normalized[1],
-                pt1_normalized[0], pt1_normalized[1], 1;
-}
 
-// Perform SVD on A
-Eigen::JacobiSVD<Eigen::MatrixXf> svd(A, Eigen::ComputeFullV);
-
-// Extract the essential matrix from the last column of V
-Eigen::VectorXf v = svd.matrixV().col(7);
-EssentialMatrix << v(0), v(1), v(2),
-                   v(3), v(4), v(5),
-                   v(6), v(7), v(8);
-
-// Enforce rank-2 constraint by performing SVD on EssentialMatrix
-Eigen::JacobiSVD<Eigen::Matrix3f> svd_E(EssentialMatrix, Eigen::ComputeFullU | Eigen::ComputeFullV);
-Eigen::Vector3f singular_values = svd_E.singularValues();
-singular_values[2] = 0;
-EssentialMatrix = svd_E.matrixU() * singular_values.asDiagonal() * svd_E.matrixV().transpose();
-return EssentialMatrix;
-}
+// 上次作业的8点法计算本质矩阵，效果贼差，浪费我好长时间 
 Eigen::Matrix3f EssentialMatrixEightPointEstimate(const std::vector<Eigen::Vector2f> &points1,
                                                   const std::vector<Eigen::Vector2f> &points2)
 {
@@ -188,7 +155,7 @@ Eigen::Matrix3f EssentialMatrixEightPointEstimate(const std::vector<Eigen::Vecto
     E(2, 0) = x[6];
     E(2, 1) = x[7];
     E(2, 2) = x[8];
-    //set singular value to zero
+    // set singular value to zero
     Eigen::JacobiSVD<Eigen::Matrix3f> svd_E(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
     Eigen::Matrix3f U = svd_E.matrixU();
     Eigen::Matrix3f V_E = svd_E.matrixV();
@@ -224,55 +191,47 @@ Mat findEssentialMatrixRANSAC(const vector<Point2f> &pts1, const vector<Point2f>
     Mat best_E;
     vector<uchar> current_inliers(N);
     int sample_count = 0;
-    // for (int iter = 0; iter < RANSAC_ITERATIONS; ++iter)
-    // {
-        while (sample_count < RANSAC_ITERATIONS){
+// 原来的循环太久了，改了一下
+    while (sample_count < RANSAC_ITERATIONS)
+    {
         //  homework2: 选择8个匹配点，并完成Essential matrix的计算
         vector<Point2f> pts1_8, pts2_8;
         for (int i = 0; i < 8; ++i)
         {
             int idx = rng.uniform(0, N);
-            // pts1_8.push_back(Point2f2Vector2f(pts1[idx]));
-            // pts2_8.push_back(Point2f2Vector2f(pts2[idx]));
             pts1_8.push_back(pts1[idx]);
             pts2_8.push_back(pts2[idx]);
         }
-        // Eigen::Matrix3f E = EssentialMatrixEightPointEstimate(pts1_8, pts2_8);
-        
         // 自己写的 效果不好
         // Eigen::Matrix3f E=EssentialMatrixEightPointEstimate(pts1_8, pts2_8);
-        Mat E =cv::findEssentialMat(pts1_8, pts2_8, K);
+        Mat E = cv::findEssentialMat(pts1_8, pts2_8, K);
 
         // homework2 end
 
         // homework3: 计算内点数量
         int inlier_count = 0;
         for (int i = 0; i < N; ++i)
-        {   
-            
-            E.convertTo(E, CV_32F);
-            // Eigen::Vector3f p1 = Point2f2Vector3f(pts1[i]);
-            // Eigen::Vector3f p2 = Point2f2Vector3f(pts2[i]);
-            Vec3f p1;
-            p1<<pts1[i].x,pts1[i].y,1.0;
-            Vec3f p2;
-            p2<<pts2[i].x,pts2[i].y,1.0;
-            // Eigen::Vector3f p2tEp1=p2.transpose()*E*p1;
-            Mat p2tEp1 = p2.t()*K.inv().t()* E*K.inv()*p1;
+        {
 
-            // std::cout << p2tEp1.size() << std::endl;
-            if (fabs(p2tEp1.at<float>(0,0)) < RANSAC_THRESHOLD)
+            E.convertTo(E, CV_32F);
+            Vec3f p1;
+            p1 << pts1[i].x, pts1[i].y, 1.0;
+            Vec3f p2;
+            p2 << pts2[i].x, pts2[i].y, 1.0;
+            Mat p2tEp1 = p2.t() * K.inv().t() * E * K.inv() * p1;
+
+            if (fabs(p2tEp1.at<float>(0, 0)) < RANSAC_THRESHOLD)
             {
                 current_inliers[i] = 1;
                 inlier_count++;
             }
         }
-         float e_ = 1 - float(inlier_count) / float(N);
-               if (e > e_)
-               {
-                   e = e_;
-                   RANSAC_ITERATIONS = log(1 - 0.99) / log(1 - pow(1 - e, 8));
-               }
+        float e_ = 1 - float(inlier_count) / float(N);
+        if (e > e_)
+        {
+            e = e_;
+            RANSAC_ITERATIONS = log(1 - 0.99) / log(1 - pow(1 - e, 8));
+        }
         // homework3 end
         // homework4: 如果当前内点数量大于最大内点数量，则更新最佳Essential Matrix
         if (inlier_count > max_inliers)
@@ -281,11 +240,11 @@ Mat findEssentialMatrixRANSAC(const vector<Point2f> &pts1, const vector<Point2f>
             best_E = E;
             inliers = current_inliers;
         }
-          sample_count++;
+        sample_count++;
         // homework4 end
     }
 
-    //recompute best E with all inliers
+    // recompute best E with all inliers
     vector<Point2f> pts1_inliers, pts2_inliers;
     for (int i = 0; i < N; ++i)
     {
@@ -295,19 +254,7 @@ Mat findEssentialMatrixRANSAC(const vector<Point2f> &pts1, const vector<Point2f>
             pts2_inliers.push_back(pts2[i]);
         }
     }
-    // Eigen::Matrix3f E = EssentialMatrixEightPointEstimate(pts1_inliers, pts2_inliers);
-    // Eigen::JacobiSVD<Eigen::Matrix3f> svd_E(E, Eigen::ComputeFullU | Eigen::ComputeFullV);
-    // Eigen::Matrix3f U = svd_E.matrixU();
-    // Eigen::Matrix3f V_E = svd_E.matrixV();
-    // Eigen::Matrix3f D;
-    // D.setZero();
-    // D(0, 0) = (svd_E.singularValues())[0];
-    // D(1, 1) = (svd_E.singularValues())[1];
-    // D(2, 2) = 0;
-    // best_E = Eigen2cvMat(U * D * V_E.transpose());
-    // std::cout << "best_F: " << best_E << std::endl;
-    // best_E = K.t() * best_E * K;
-    best_E=cv::findEssentialMat(pts1_inliers, pts2_inliers, K);
+    best_E = cv::findEssentialMat(pts1_inliers, pts2_inliers, K);
     return best_E;
 }
 
@@ -337,10 +284,10 @@ int main()
     vector<DMatch> matches;
     FlannBasedMatcher matcher;
     matcher.match(descriptors1, descriptors2, matches);
-    //find good matches (very important)
+    // 找到优质匹配点 这个对结果提升较大
     double min_dist = 10000, max_dist = 0;
 
-      for (int i = 0; i < descriptors1.rows; ++i)
+    for (int i = 0; i < descriptors1.rows; ++i)
     {
         double dist = matches[i].distance;
         if (dist < min_dist)
