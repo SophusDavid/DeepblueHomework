@@ -18,7 +18,7 @@ int RANSAC_ITERATIONS = 10000;
 // const int RANSAC_ITERATIONS = 1000;
 
 // const double RANSAC_THRESHOLD = 1.0;
-const double RANSAC_THRESHOLD = 0.5;
+const double RANSAC_THRESHOLD = 1.0;
 
 // 伪随机数生成器
 RNG rng(12345);
@@ -30,38 +30,7 @@ Eigen::Vector2f Point2f2Vector2f(const Point2f &p)
     v << p.x, p.y;
     return v;
 }
-// Vector2f转换为Point2f
-Point2f Vector2f2Point2f(const Eigen::Vector2f &v)
-{
-    Point2f p;
-    p.x = v(0);
-    p.y = v(1);
-    return p;
-}
-// Point2f转换为Vector3f
-Eigen::Vector3f Point2f2Vector3f(const Point2f &p)
-{
-    Eigen::Vector3f v;
-    v << p.x, p.y, 1.0;
-    return v;
-}
-// Eigen::Matrix3f 转换为 cv::Mat
-Mat Eigen2cvMat(const Eigen::Matrix3f &e)
-{
-    Mat m(3, 3, CV_32F);
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            m.at<float>(i, j) = e(i, j);
-    return m;
-}
-Eigen::Matrix3f cvMat2Eigen(const Mat &m)
-{
-    Eigen::Matrix3f e;
-    for (int i = 0; i < 3; i++)
-        for (int j = 0; j < 3; j++)
-            e(i, j) = m.at<float>(i, j);
-    return e;
-}
+
 void CenterAndNormalizeImagePoints(const std::vector<Eigen::Vector2f> &points,
                                    std::vector<Eigen::Vector2f> *normed_points,
                                    Eigen::Matrix3f *matrix)
