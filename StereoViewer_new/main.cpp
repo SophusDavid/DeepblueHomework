@@ -75,11 +75,11 @@ int main(int argc, char **argv){
         cv::circle(out2, cv::Point(int(points2_trans[i].x), int(points2_trans[i].y)), 3, cv::Scalar(255, 0, 0));
     }
 
-    cv::imshow("warp1", out1);
-    cv::waitKey(0);
+    // cv::imshow("warp1", out1);
+    // cv::waitKey(0);
 
-    cv::imshow("warp2", out2);
-    cv::waitKey(0);
+    // cv::imshow("warp2", out2);
+    // cv::waitKey(0);
 
     cv::cv2eigen(H_cv1, H1);
     cv::cv2eigen(H_cv2, H2);

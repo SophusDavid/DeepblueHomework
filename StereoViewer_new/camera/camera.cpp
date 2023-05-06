@@ -193,8 +193,8 @@ void Camera::GenerateFrames() {
                      cv::Scalar(0, 255, 0), 1);
         }
 
-        cv::imshow("render", cur_image);
-        cv::waitKey(0);
+        // cv::imshow("render", cur_image);
+        // cv::waitKey(0);
         
         cur_frame.image_ = cur_image;
         cur_frame.frame_idx = count_frames;
