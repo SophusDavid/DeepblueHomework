@@ -313,7 +313,7 @@ cout << "Essential Matrix test:" << endl
 
     Mat img_matches;
     drawMatches(img1, keypoints1, img2, keypoints2, inlier_matches, img_matches);
-    // imshow("Inlier Matches", img_matches);
+    imshow("Inlier Matches", img_matches);
     imwrite("./inlier_matches.png", img_matches);
     // waitKey();
 
