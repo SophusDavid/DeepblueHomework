@@ -211,26 +211,26 @@ Eigen::Matrix4d Camera::GetSecondFrameTwc(){
 }
 
 std::vector<Eigen::Vector2d> Camera::GetFirstFramePoints() {
-    cv::imshow("render", frames[first_frame_has_whole_points].image_);
-    cv::waitKey(0);
+    // cv::imshow("render", frames[first_frame_has_whole_points].image_);
+    // cv::waitKey(0);
     return frames[first_frame_has_whole_points].points;
 }
 
 std::vector<Eigen::Vector2d> Camera::GetSecondFramePoints() {
-    cv::imshow("render2", frames[second_frame_has_whole_points].image_);
-    cv::waitKey(0);
+    // cv::imshow("render2", frames[second_frame_has_whole_points].image_);
+    // cv::waitKey(0);
     return frames[second_frame_has_whole_points].points;
 }
 
 std::vector<Eigen::Vector2d> Camera::GetFirstFrameNormalPoints() {
-    cv::imshow("render", frames[first_frame_has_whole_points].image_);
-    cv::waitKey(0);
+    // cv::imshow("render", frames[first_frame_has_whole_points].image_);
+    // cv::waitKey(0);
     return frames[first_frame_has_whole_points].normal_points;
 }
 
 std::vector<Eigen::Vector2d> Camera::GetSecondFrameNormalPoints() {
-    cv::imshow("render2", frames[second_frame_has_whole_points].image_);
-    cv::waitKey(0);
+    // cv::imshow("render2", frames[second_frame_has_whole_points].image_);
+    // cv::waitKey(0);
     return frames[second_frame_has_whole_points].normal_points;
 }
 
