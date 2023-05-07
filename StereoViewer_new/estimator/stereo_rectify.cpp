@@ -64,7 +64,7 @@ void RectifyStereoCamerasByPoints(const Camera& camera,
                                   const std::vector<Eigen::Vector2d>& points2, 
                                   Eigen::Matrix3d* H1,
                                   Eigen::Matrix3d* H2) {
-    Eigen::Matrix3d E = EssentialMatrixEightPointEstimate(normal_points1, normal_points2);
+    Eigen::Matrix3d E = EssentialMatrixEightPointEstimate(points1, points2);
     Eigen::Matrix3d F = camera.intrinsic_matrix.transpose().inverse() * E * camera.intrinsic_matrix.inverse();
 
     //////////////////// homework ///////////////////////////
@@ -72,36 +72,48 @@ void RectifyStereoCamerasByPoints(const Camera& camera,
     Eigen::Vector3d e1 = Eigen::Vector3d::Zero();
     Eigen::Vector3d e2 = Eigen::Vector3d::Zero();
     
-    e1 = GetE(normal_points2,F);
-    e2 = GetE(normal_points1,F.transpose());
+    e1 = GetE(points2,F);
+    e2 = GetE(points1,F.transpose());
     *H1 = Eigen::Matrix3d::Identity();
     *H2 = Eigen::Matrix3d::Identity();
 
     // *H1=GetH(e1,camera);
     // std::cout<<"e1':"<<*H1*e1<<std::endl;
     *H2=GetH2(e2,camera);
-    
+    // std::cout<<*H2/(*H2).norm()<<std::endl;
     // 计算M
     Eigen::Matrix3d M;
     Eigen::Matrix3d e2x;
     e2x<<0,-e2(2),e2(1),
          e2(2),0,-e2(0),
          -e2(1),e2(0),0;
-    M=e2x*F;
+    M=e2x*F+e2*Eigen::Vector3d(1,1,1).transpose();
+    // M=e2x*F;
+
     
     // Eigen::Matrix3d e2xM=e2.transpose()*M-M.transpose()*e2;
     // M=e2xM/(e2xM.norm())*(F.norm());
-    Eigen::MatrixXd A(normal_points1.size(),4);
-    for (int i =0;i<normal_points1.size();++i)
+    Eigen::MatrixXd A(points1.size(),3);
+    Eigen::VectorXd b(points1.size());
+    for (int i =0;i<points1.size();++i)
     {
-        Eigen::Vector3d H2x=(*H2)*points2[i].homogeneous();
-        std::cout<<"H2x:"<<H2x<<std::endl;
-        A.block<1,4>(i,0)=Eigen::Matrix<double,1,4>(points2[i](0),points2[i](1),1.0,-H2x(0));
-
+        Eigen::Vector3d H2x=(*H2)*points1[i].homogeneous();
+        Eigen::Vector3d H2Mx1=(*H2)*M*points1[i].homogeneous();
+        // std::cout<<"H2x:"<<H2x<<std::endl;
+        A.block<1,3>(i,0)=Eigen::Matrix<double,1,3>(H2Mx1(0),H2Mx1(1),1);
+        b(i)=-H2x(0);
     }
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    Eigen::Vector4d h1=svd.matrixV().col(3);
-    h1=h1/h1(3);
+    Eigen::MatrixXd U=svd.matrixU();
+    Eigen::VectorXd b_=U.transpose()*b;
+    Eigen::VectorXd s=svd.singularValues();
+    for(int i=0;i<b_.size();++i)
+    {
+        b_(i)=b_(i)/s(i);
+    }
+
+    Eigen::Vector3d h1=svd.matrixV()*b_;
+    // std::cout<<"h1:"<<h1<<std::endl;
     Eigen::Matrix3d H1_temp;
 
     H1_temp<<h1(0),h1(1),h1(2),
