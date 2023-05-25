@@ -11,11 +11,13 @@ Eigen::Vector3d GetE(const std::vector<Eigen::Vector2d>& points,const Eigen::Mat
     int length =points.size();
     Eigen::MatrixXd A(length,3);
     // 构建SVD问题
+    int i =0;
     for(auto point : points)
     {
         Eigen::Vector3d point_homo=point.homogeneous();
         Eigen::Vector3d l=F.transpose()*point_homo;
-        A.block<1,3>(0,0)=l.transpose();
+        A.block<1,3>(i,0)=l.transpose();
+        i++;
     }
     Eigen::JacobiSVD<Eigen::MatrixXd> svd(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
     Eigen::Vector3d e=svd.matrixV().col(2);
@@ -64,7 +66,7 @@ void RectifyStereoCamerasByPoints(const Camera& camera,
                                   const std::vector<Eigen::Vector2d>& points2, 
                                   Eigen::Matrix3d* H1,
                                   Eigen::Matrix3d* H2) {
-    Eigen::Matrix3d E = EssentialMatrixEightPointEstimate(points1, points2);
+    Eigen::Matrix3d E = EssentialMatrixEightPointEstimate(normal_points1, normal_points2);
     Eigen::Matrix3d F = camera.intrinsic_matrix.transpose().inverse() * E * camera.intrinsic_matrix.inverse();
 
     //////////////////// homework ///////////////////////////
@@ -72,8 +74,8 @@ void RectifyStereoCamerasByPoints(const Camera& camera,
     Eigen::Vector3d e1 = Eigen::Vector3d::Zero();
     Eigen::Vector3d e2 = Eigen::Vector3d::Zero();
     
-    e1 = GetE(points2,F);
-    e2 = GetE(points1,F.transpose());
+    e1 = GetE(normal_points2,F);
+    e2 = GetE(normal_points1,F.transpose());
     *H1 = Eigen::Matrix3d::Identity();
     *H2 = Eigen::Matrix3d::Identity();
 
@@ -97,8 +99,12 @@ void RectifyStereoCamerasByPoints(const Camera& camera,
     Eigen::VectorXd b(points1.size());
     for (int i =0;i<points1.size();++i)
     {
-        Eigen::Vector3d H2x=(*H2)*points1[i].homogeneous();
+        // 这里把points2写成1了
+        Eigen::Vector3d H2x=(*H2)*points2[i].homogeneous();
+        // 这里忘记归一化了
+        H2x=H2x/H2x(2);
         Eigen::Vector3d H2Mx1=(*H2)*M*points1[i].homogeneous();
+        H2Mx1=H2Mx1/H2Mx1(2);
         // std::cout<<"H2x:"<<H2x<<std::endl;
         A.block<1,3>(i,0)=Eigen::Matrix<double,1,3>(H2Mx1(0),H2Mx1(1),1);
         b(i)=-H2x(0);
